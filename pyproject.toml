@@ -1,0 +1,10 @@
+[project]
+name = "random-network-distillation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gymnasium[accept-rom-license,atari]>=1.0.0",
+    "torch>=2.5.1",
+]
