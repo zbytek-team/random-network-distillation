@@ -6,10 +6,9 @@ from torch.multiprocessing import Process
 import flag
 import time
 import ale_py
+import traceback
 
 cv2.ocl.setUseOpenCL(False)
-
-
 gym.register_envs(ale_py)
 
 
@@ -36,32 +35,44 @@ class MontezumaRevenge(Process):
         return env
 
     def run(self):
-        while True:
-            obs, done = None, None
-            action = self.child.recv()
-            reward = 0
-            if flag.STICKY_ACTION:
-                if np.random.rand() <= self.p:
-                    action = self.last_action
-                self.last_action = action
-            for i in range(0, self.action_re):
-                obs, rew, done, trunc, info = self.env.step(action)
-                reward += rew
-                if info["lives"] < 6:
-                    done = True
-                if self.steps > self.max_steps:
-                    done = True
-                if done or trunc:
-                    self.ep_num += 1
-                    self.steps = 0
-                    obs, _ = self.env.reset()
+        try:
+            while True:
+                obs, done = None, None
+                action = self.child.recv()
+                if action is None:
+                    print(f"Child process {self.env_id} received termination signal.")
                     break
 
-            if flag.SHOW_GAME:
-                self.env.render()
-                time.sleep(0.05)
-            self.steps += 1
-            self.child.send([obs, reward, done])
+                reward = 0
+                if flag.STICKY_ACTION:
+                    if np.random.rand() <= self.p:
+                        action = self.last_action
+                    self.last_action = action
+                for i in range(0, self.action_re):
+                    obs, rew, done, trunc, info = self.env.step(action)
+                    reward += rew
+                    if info["lives"] < 6:
+                        done = True
+                    if self.steps > self.max_steps:
+                        done = True
+                    if done or trunc:
+                        self.ep_num += 1
+                        self.steps = 0
+                        obs, _ = self.env.reset()
+                        break
+
+                if flag.SHOW_GAME:
+                    self.env.render()
+                    time.sleep(0.05)
+                self.steps += 1
+                self.child.send([obs, reward, done])
+        except EOFError:
+            print(f"Child process {self.env_id}: EOFError - Parent process closed pipe.")
+        except Exception as e:
+            print(f"Error in child process {self.env_id}: {e}")
+            print(traceback.format_exc())
+        finally:
+            self.child.close()
 
 
 class PreprocessFrame(gym.ObservationWrapper):
