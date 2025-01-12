@@ -9,4 +9,4 @@ PLAY = True
 USE_STANDARD_ADV = False
 VALUE_CLIP = False
 STICKY_ACTION = True
-ENV = "MR"
+ENV = "FW"

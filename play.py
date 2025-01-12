@@ -1,6 +1,7 @@
 from model import Model
 from torch.multiprocessing import Pipe
 import montezuma_revenge_env
+import freeway_env
 import torch
 import flag
 import numpy as np
@@ -15,7 +16,12 @@ class Player:
             checkpoint = torch.load(load_path, map_location=self.device)
         else:
             checkpoint = torch.load(load_path)
-        self.model = Model(num_action=18).to(self.device)
+        if flag.ENV == "MR":
+            num_action = 18
+        elif flag.ENV == "FW":
+            num_action = 3
+            
+        self.model = Model(num_action).to(self.device)
         self.model.load_state_dict(checkpoint["new_model_state_dict"])
 
         self.model.eval()
@@ -24,6 +30,8 @@ class Player:
         parent, child = Pipe()
         if flag.ENV == "MR":
             env = montezuma_revenge_env.MontezumaRevenge(0, child, 1, 0, 18000)
+        elif flag.ENV == "FW":
+            env = freeway_env.Freeway(0, child, 1, 0, 18000)
         env.start()
         self.current_observation = np.zeros((4, 84, 84))
 

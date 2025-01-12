@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="train parser")
     parser.add_argument(
-        "--num_env", default=64, type=int, help="This is the number of workers"
+        "--num_env", default=1, type=int, help="This is the number of workers"
     )
     parser.add_argument(
         "--game_steps",
@@ -121,6 +121,10 @@ if __name__ == "__main__":
         num_action = 18  # number of actions for montezuma revenge
         flag.ENV = "MR"
 
+    if args.env_type == "FW":
+        num_action = 3 # number of actions for freeway
+        flag.ENV = "FW"
+
     if flag.TRAIN:
         new_trainer = Trainer(
             num_training_steps=args.train_steps,
@@ -146,5 +150,6 @@ if __name__ == "__main__":
         )
         new_trainer.collect_experiance_and_train()
     elif flag.PLAY:
+        print(flag.ENV)
         new_player = Player(load_path=args.path)
         new_player.play()
