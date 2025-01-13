@@ -1,6 +1,7 @@
 from model import Model
 from torch.multiprocessing import Pipe
 import montezuma_revenge_env
+import king_kong_env
 import freeway_env
 import torch
 import flag
@@ -20,6 +21,8 @@ class Player:
             num_action = 18
         elif flag.ENV == "FW":
             num_action = 3
+        elif flag.ENV == "KK":
+            num_action = 6
             
         self.model = Model(num_action).to(self.device)
         self.model.load_state_dict(checkpoint["new_model_state_dict"])
@@ -32,6 +35,8 @@ class Player:
             env = montezuma_revenge_env.MontezumaRevenge(0, child, 1, 0, 18000)
         elif flag.ENV == "FW":
             env = freeway_env.Freeway(0, child, 1, 0, 18000)
+        elif flag.ENV == "KK":
+            env = king_kong_env.KingKong(0, child, 1, 0, 18000)
         env.start()
         self.current_observation = np.zeros((4, 84, 84))
 

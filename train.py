@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 import flag
 import montezuma_revenge_env
 import freeway_env
+import king_kong_env
 from model import Model
 from rnd_model import TargetModel, PredictorModel
 from utils import RunningStdMean, RewardForwardFilter, global_grad_norm_
@@ -155,7 +156,9 @@ class Trainer:
                     )
                 elif flag.ENV == "FW":
                     new_env = freeway_env.Freeway(i, child, self.num_action_repeat, 0.25, 6000)
-
+                elif flag.ENV == "KK":
+                    new_env = king_kong_env.KingKong(i, child, self.num_action_repeat, 0.25, 6000)
+                
                 new_env.start()
                 envs.append(new_env)
                 parents.append(parent)
