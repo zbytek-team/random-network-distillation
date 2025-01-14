@@ -35,6 +35,7 @@ class KingKong(Process):
 
     def run(self):
         try:
+            lives = 3
             while True:
                 obs, done = None, None
                 action = self.child.recv()
@@ -48,15 +49,19 @@ class KingKong(Process):
                         action = self.last_action
                     self.last_action = action
 
+
                 for i in range(self.action_re):
                     obs, rew, done, trunc, info = self.env.step(action)
                     reward += rew
+                    print(f"obs: {obs}")
                     
-                    if info['lives'] < 3:
-                        done = True
-                    if self.steps > self.max_steps:
-                        done = True
+                    if info['lives'] < lives:
+                        penalty_value = 50
+                        reward = reward - penalty_value
+                        lives = info['lives']
+                        break
                     if done or trunc:
+                        lives = 3
                         self.ep_num += 1
                         self.steps = 0
                         obs, _ = self.env.reset()
