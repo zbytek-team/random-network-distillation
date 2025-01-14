@@ -53,7 +53,6 @@ class KingKong(Process):
                 for i in range(self.action_re):
                     obs, rew, done, trunc, info = self.env.step(action)
                     reward += rew
-                    print(f"obs: {obs}")
                     
                     if info['lives'] < lives:
                         penalty_value = 50
