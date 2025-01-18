@@ -1,10 +1,10 @@
-from model import Model
+from src.models.ppo import Model
 from torch.multiprocessing import Pipe
-import montezuma_revenge_env
-import king_kong_env
-import freeway_env
+import src.envs.montezuma as montezuma_revenge_env
+import src.envs.freeway as freeway_env
+import src.envs.king_kong as king_kong_env
 import torch
-import flag
+import src.flag as flag
 import numpy as np
 
 
@@ -23,7 +23,7 @@ class Player:
             num_action = 3
         elif flag.ENV == "KK":
             num_action = 6
-            
+
         self.model = Model(num_action).to(self.device)
         self.model.load_state_dict(checkpoint["new_model_state_dict"])
 
@@ -41,11 +41,7 @@ class Player:
         self.current_observation = np.zeros((4, 84, 84))
 
         while True:
-            observation_tensor = (
-                torch.from_numpy(np.expand_dims(self.current_observation, 0))
-                .float()
-                .to(self.device)
-            )
+            observation_tensor = torch.from_numpy(np.expand_dims(self.current_observation, 0)).float().to(self.device)
             predicted_action, value1, value2 = self.model.step(observation_tensor / 255)
             parent.send(predicted_action[0])
             self.current_observation, rew, done = parent.recv()

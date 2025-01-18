@@ -1,6 +1,6 @@
-from train import Trainer
-import flag
-from play import Player
+from src.train import Trainer
+import src.flag as flag
+from src.play import Player
 import argparse
 from multiprocessing import freeze_support
 
@@ -8,54 +8,30 @@ if __name__ == "__main__":
     freeze_support()
 
     parser = argparse.ArgumentParser(description="train parser")
-    parser.add_argument(
-        "--num_env", default=1, type=int, help="This is the number of workers"
-    )
+    parser.add_argument("--num_env", default=1, type=int, help="This is the number of workers")
     parser.add_argument(
         "--game_steps",
         default=128,
         type=int,
         help="This is the number of steps in one environment for every training step",
     )
-    parser.add_argument(
-        "--num_epoch", default=4, type=int, help="This is the number of epoches"
-    )
-    parser.add_argument(
-        "--mini_batch", default=2, type=int, help="This is mini batch size "
-    )
-    parser.add_argument(
-        "--lr", default=1e-4, type=float, help="This is optimizer learning rate"
-    )
-    parser.add_argument(
-        "--gamma", default=0.999, type=float, help="This is discount factor"
-    )
+    parser.add_argument("--num_epoch", default=4, type=int, help="This is the number of epoches")
+    parser.add_argument("--mini_batch", default=2, type=int, help="This is mini batch size ")
+    parser.add_argument("--lr", default=1e-4, type=float, help="This is optimizer learning rate")
+    parser.add_argument("--gamma", default=0.999, type=float, help="This is discount factor")
     parser.add_argument(
         "--int_gamma",
         default=0.99,
         type=float,
         help="This is the intrinsic discount factor",
     )
-    parser.add_argument(
-        "--lambda_gae", default=0.95, type=float, help="This is lambda in GAE"
-    )
-    parser.add_argument(
-        "--clip_range", default=0.1, type=float, help="This is clip range for PPO"
-    )
-    parser.add_argument(
-        "--value_coef", default=0.5, type=float, help="This is value coef"
-    )
-    parser.add_argument(
-        "--ent_coef", default=0.001, type=float, help="This is entropy coef"
-    )
-    parser.add_argument(
-        "--save_int", default=500, type=int, help="This is save interval"
-    )
-    parser.add_argument(
-        "--action_re", default=4, type=int, help="This is number of action repeats"
-    )
-    parser.add_argument(
-        "--train_steps", default=3000, type=int, help="This is number of train steps"
-    )
+    parser.add_argument("--lambda_gae", default=0.95, type=float, help="This is lambda in GAE")
+    parser.add_argument("--clip_range", default=0.1, type=float, help="This is clip range for PPO")
+    parser.add_argument("--value_coef", default=0.5, type=float, help="This is value coef")
+    parser.add_argument("--ent_coef", default=0.001, type=float, help="This is entropy coef")
+    parser.add_argument("--save_int", default=500, type=int, help="This is save interval")
+    parser.add_argument("--action_re", default=4, type=int, help="This is number of action repeats")
+    parser.add_argument("--train_steps", default=3000, type=int, help="This is number of train steps")
     parser.add_argument(
         "--play",
         default=False,
@@ -74,12 +50,8 @@ if __name__ == "__main__":
         type=str,
         help="path of model to load / either for train or test",
     )
-    parser.add_argument(
-        "--ext_adv_coef", default=2, type=float, help="extrinsic advantage coef"
-    )
-    parser.add_argument(
-        "--int_adv_coef", default=1, type=float, help="intrinsic advantage coef"
-    )
+    parser.add_argument("--ext_adv_coef", default=2, type=float, help="extrinsic advantage coef")
+    parser.add_argument("--int_adv_coef", default=1, type=float, help="intrinsic advantage coef")
     parser.add_argument("--env_type", default="MR", type=str)
     parser.add_argument(
         "--predictor_update_p",
@@ -91,9 +63,7 @@ if __name__ == "__main__":
         "--num_pre_norm_steps",
         default=1000,
         type=int,
-        help="the number of steps taken before game"
-        "for initializing normilization"
-        " is: this variable * game_steps",
+        help="the number of steps taken before gamefor initializing normilization is: this variable * game_steps",
     )
 
     args = parser.parse_args()
@@ -122,11 +92,11 @@ if __name__ == "__main__":
         flag.ENV = "MR"
 
     if args.env_type == "FW":
-        num_action = 3 # number of actions for freeway
+        num_action = 3  # number of actions for freeway
         flag.ENV = "FW"
 
     if args.env_type == "KK":
-        num_action = 6 # number of actions for freeway
+        num_action = 6  # number of actions for freeway
         flag.ENV = "KK"
 
     if flag.TRAIN:

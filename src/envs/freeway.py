@@ -3,7 +3,7 @@ import cv2
 import gymnasium as gym
 import numpy as np
 from torch.multiprocessing import Process
-import flag
+import src.flag as flag
 import time
 import ale_py
 import traceback
@@ -27,9 +27,7 @@ class Freeway(Process):
         self.max_steps = max_steps
 
     def make_env(self):
-        env = gym.make(
-            "ALE/Freeway-v5", render_mode="human" if flag.SHOW_GAME else None
-        )
+        env = gym.make("ALE/Freeway-v5", render_mode="human" if flag.SHOW_GAME else None)
         env = PreprocessFrame(env)
         return env
 
@@ -78,9 +76,7 @@ class PreprocessFrame(gym.ObservationWrapper):
         gym.ObservationWrapper.__init__(self, env)
         self.width = 84
         self.height = 84
-        self.observation_space = gym.spaces.Box(
-            low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8
-        )
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8)
         self.frame_deque = deque(
             [
                 np.zeros((self.height, self.width)),
@@ -95,9 +91,7 @@ class PreprocessFrame(gym.ObservationWrapper):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = frame[:, :, None]
 
-        frame = cv2.resize(
-            frame, (self.width, self.height), interpolation=cv2.INTER_AREA
-        )
+        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return self.stack_frames(frame)
 
     def stack_frames(self, new_frame):

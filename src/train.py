@@ -9,15 +9,16 @@ from torch.distributions.categorical import Categorical
 from torch.multiprocessing import Pipe
 from torch.utils.tensorboard import SummaryWriter
 
-import flag
-import montezuma_revenge_env
-import freeway_env
-import king_kong_env
-from model import Model
-from rnd_model import TargetModel, PredictorModel
-from utils import RunningStdMean, RewardForwardFilter, global_grad_norm_
+import src.flag as flag
+import src.envs.montezuma as montezuma_revenge_env
+import src.envs.freeway as freeway_env
+import src.envs.king_kong as king_kong_env
+from src.models.ppo import Model
+from src.models.rnd import TargetModel, PredictorModel
+from src.utils import RunningStdMean, RewardForwardFilter, global_grad_norm_
 import os
 import time
+
 
 class Trainer:
     def __init__(
@@ -151,14 +152,12 @@ class Trainer:
             for i in range(self.num_env):
                 parent, child = Pipe()
                 if flag.ENV == "MR":
-                    new_env = montezuma_revenge_env.MontezumaRevenge(
-                        i, child, self.num_action_repeat, 0.25, 6000
-                    )
+                    new_env = montezuma_revenge_env.MontezumaRevenge(i, child, self.num_action_repeat, 0.25, 6000)
                 elif flag.ENV == "FW":
                     new_env = freeway_env.Freeway(i, child, self.num_action_repeat, 0.25, 6000)
                 elif flag.ENV == "KK":
                     new_env = king_kong_env.KingKong(i, child, self.num_action_repeat, 0.25, 6000)
-                
+
                 new_env.start()
                 envs.append(new_env)
                 parents.append(parent)
@@ -187,14 +186,10 @@ class Trainer:
                         obs, rew, done = parents[i].recv()
                         current_observations.append(obs)
                     observations_to_normalize.extend(current_observations)
-                    if (
-                        len(observations_to_normalize)
-                        % (self.num_game_steps * self.num_env)
-                        == 0
-                    ):
-                        observations_to_normalize = np.stack(observations_to_normalize)[
-                            :, 3, :, :
-                        ].reshape(-1, 1, 84, 84)
+                    if len(observations_to_normalize) % (self.num_game_steps * self.num_env) == 0:
+                        observations_to_normalize = np.stack(observations_to_normalize)[:, 3, :, :].reshape(
+                            -1, 1, 84, 84
+                        )
                         self.obs_rms.update(observations_to_normalize)
                         observations_to_normalize = []
                 print("normalization ended")
@@ -217,28 +212,19 @@ class Trainer:
 
                     with torch.no_grad():
                         current_observations_tensor = (
-                            torch.from_numpy(np.array(current_observations))
-                            .float()
-                            .to(self.device)
+                            torch.from_numpy(np.array(current_observations)).float().to(self.device)
                         )
-                        decided_actions, predicted_ext_values, predicted_int_values = (
-                            self.new_model.step(current_observations_tensor / 255.0)
+                        decided_actions, predicted_ext_values, predicted_int_values = self.new_model.step(
+                            current_observations_tensor / 255.0
                         )
-                        one_channel_observations = np.array(current_observations)[
-                            :, 3, :, :
-                        ].reshape(-1, 1, 84, 84)
+                        one_channel_observations = np.array(current_observations)[:, 3, :, :].reshape(-1, 1, 84, 84)
                         one_channel_observations = (
-                            (one_channel_observations - self.obs_rms.mean)
-                            / np.sqrt(self.obs_rms.var)
+                            (one_channel_observations - self.obs_rms.mean) / np.sqrt(self.obs_rms.var)
                         ).clip(-5, 5)
                         one_channel_observations_tensor = (
-                            torch.from_numpy(one_channel_observations)
-                            .float()
-                            .to(self.device)
+                            torch.from_numpy(one_channel_observations).float().to(self.device)
                         )
-                        int_reward = self.get_intrinsic_rewards(
-                            one_channel_observations_tensor
-                        )
+                        int_reward = self.get_intrinsic_rewards(one_channel_observations_tensor)
                         total_int_rewards.append(int_reward)
 
                     total_int_values.append(predicted_int_values)
@@ -279,12 +265,10 @@ class Trainer:
                 # next state value, required for computing advantages
                 with torch.no_grad():
                     current_observations_tensor = (
-                        torch.from_numpy(np.array(current_observations))
-                        .float()
-                        .to(self.device)
+                        torch.from_numpy(np.array(current_observations)).float().to(self.device)
                     )
-                    decided_actions, predicted_ext_values, predicted_int_values = (
-                        self.new_model.step(current_observations_tensor / 255.0)
+                    decided_actions, predicted_ext_values, predicted_int_values = self.new_model.step(
+                        current_observations_tensor / 255.0
                     )
 
                 total_int_values.append(predicted_int_values)
@@ -292,14 +276,11 @@ class Trainer:
 
                 # convert lists to numpy arrays
                 observations_array = np.array(total_observations)
-                total_one_channel_observations_array = observations_array[
-                    :, 3, :, :
-                ].reshape(-1, 1, 84, 84)
+                total_one_channel_observations_array = observations_array[:, 3, :, :].reshape(-1, 1, 84, 84)
 
                 self.obs_rms.update(total_one_channel_observations_array)
                 total_one_channel_observations_array = (
-                    (total_one_channel_observations_array - self.obs_rms.mean)
-                    / np.sqrt(self.obs_rms.var)
+                    (total_one_channel_observations_array - self.obs_rms.mean) / np.sqrt(self.obs_rms.var)
                 ).clip(-5, 5)
                 ext_rewards_array = np.array(total_ext_rewards).clip(-1, 1)
 
@@ -310,10 +291,7 @@ class Trainer:
                 int_rewards_array = np.stack(total_int_rewards)
 
                 total_reward_per_env = np.array(
-                    [
-                        self.reward_filter.update(reward_per_env)
-                        for reward_per_env in int_rewards_array.T
-                    ]
+                    [self.reward_filter.update(reward_per_env) for reward_per_env in int_rewards_array.T]
                 )  # calcuting returns for every env
 
                 mean, std, count = (
@@ -343,34 +321,19 @@ class Trainer:
                     int_rewards_array, int_values_array, dones_array, 1
                 )
 
-                advantages_array = (
-                    self.ext_adv_coef * ext_advantages_array
-                    + self.int_adv_coef * int_advantages_array
-                )
+                advantages_array = self.ext_adv_coef * ext_advantages_array + self.int_adv_coef * int_advantages_array
 
                 if flag.DEBUG:
                     print("all actions are", total_actions)
 
-                observations_tensor = (
-                    torch.from_numpy(np.array(observations_array)).float().to(self.device)
-                )
+                observations_tensor = torch.from_numpy(np.array(observations_array)).float().to(self.device)
                 observations_tensor = observations_tensor / 255.0
-                ext_returns_tensor = (
-                    torch.from_numpy(np.array(ext_returns_array)).float().to(self.device)
-                )
-                int_returns_tensor = (
-                    torch.from_numpy(np.array(int_returns_array)).float().to(self.device)
-                )
-                actions_tensor = (
-                    torch.from_numpy(np.array(actions_array)).long().to(self.device)
-                )
-                advantages_tensor = (
-                    torch.from_numpy(np.array(advantages_array)).float().to(self.device)
-                )
+                ext_returns_tensor = torch.from_numpy(np.array(ext_returns_array)).float().to(self.device)
+                int_returns_tensor = torch.from_numpy(np.array(int_returns_array)).float().to(self.device)
+                actions_tensor = torch.from_numpy(np.array(actions_array)).long().to(self.device)
+                advantages_tensor = torch.from_numpy(np.array(advantages_array)).float().to(self.device)
                 one_channel_observations_tensor = (
-                    torch.from_numpy(total_one_channel_observations_array)
-                    .float()
-                    .to(self.device)
+                    torch.from_numpy(total_one_channel_observations_array).float().to(self.device)
                 )
 
                 random_indexes = np.arange(self.batch_size)
@@ -393,9 +356,7 @@ class Trainer:
                     for n in range(0, self.mini_batch_num):
                         # print("----------------next mini batch-------------")
                         start_index = n * self.mini_batch_size
-                        index_slice = random_indexes[
-                            start_index : start_index + self.mini_batch_size
-                        ]
+                        index_slice = random_indexes[start_index : start_index + self.mini_batch_size]
                         if flag.DEBUG:
                             print("indexed chosen are:", index_slice)
 
@@ -411,8 +372,8 @@ class Trainer:
                             )
                         )
 
-                        loss, policy_loss, value_loss, predictor_loss, entropy = (
-                            self.train_model(*experience_slice, old_log_prob[index_slice])
+                        loss, policy_loss, value_loss, predictor_loss, entropy = self.train_model(
+                            *experience_slice, old_log_prob[index_slice]
                         )
 
                         if epoch == self.num_epoch - 1:
@@ -428,7 +389,7 @@ class Trainer:
                             predictor_loss_avg.append(predictor_loss)
 
                     t1 = time.perf_counter_ns()
-                    print(f"Epoch {epoch} ended, after {(t1 - t0)/1e9} seconds")
+                    print(f"Epoch {epoch} ended, after {(t1 - t0) / 1e9} seconds")
 
                 loss_avg_result = np.array(loss_avg).mean()
                 policy_loss_avg_result = np.array(policy_loss_avg).mean()
@@ -451,22 +412,16 @@ class Trainer:
 
                 if flag.TENSORBOARD_AVALAIBLE:
                     self.writer.add_scalar("loss_avg", loss_avg_result, train_step)
-                    self.writer.add_scalar(
-                        "policy_loss_avg", policy_loss_avg_result, train_step
-                    )
-                    self.writer.add_scalar(
-                        "value_loss_avg", value_loss_avg_result, train_step
-                    )
-                    self.writer.add_scalar(
-                        "predictor_loss_avg", predictor_loss_avg_result, train_step
-                    )
+                    self.writer.add_scalar("policy_loss_avg", policy_loss_avg_result, train_step)
+                    self.writer.add_scalar("value_loss_avg", value_loss_avg_result, train_step)
+                    self.writer.add_scalar("predictor_loss_avg", predictor_loss_avg_result, train_step)
                     self.writer.add_scalar("entropy_avg", entropy_avg_result, train_step)
 
                 if train_step % self.save_interval == 0 or train_step == self.training_steps - 1:
                     print(f"Savings model to logs/{self.current_time}{train_step} after {train_step} steps")
-                    train_checkpoint_dir = os.path.join('logs', self.current_time)
+                    train_checkpoint_dir = os.path.join("logs", self.current_time)
                     os.makedirs(train_checkpoint_dir, exist_ok=True)
-                    train_checkpoint_file = os.path.join(train_checkpoint_dir, f'{train_step}.pth')
+                    train_checkpoint_file = os.path.join(train_checkpoint_dir, f"{train_step}.pth")
 
                     torch.save(
                         {
@@ -514,16 +469,9 @@ class Trainer:
                 is_there_a_next_state = 1
             else:
                 is_there_a_next_state = 1.0 - dones[step]
-            delta = (
-                rewards[step]
-                + (is_there_a_next_state * discount_factor * values[step + 1])
-                - values[step]
-            )
+            delta = rewards[step] + (is_there_a_next_state * discount_factor * values[step + 1]) - values[step]
             if flag.USE_GAE:
-                advantage = (
-                    delta
-                    + discount_factor * self.lam * is_there_a_next_state * advantage
-                )
+                advantage = delta + discount_factor * self.lam * is_there_a_next_state * advantage
                 advantages.append(advantage)
             else:
                 advantages.append(delta)
@@ -563,14 +511,8 @@ class Trainer:
         predictor_loss = self.predictor_mse_loss(predictor_value, target_value).mean(-1)
 
         mask = torch.rand(len(predictor_loss)).to(self.device)
-        mask = (
-            (mask < self.predictor_update_proportion)
-            .type(torch.FloatTensor)
-            .to(self.device)
-        )
-        predictor_loss = (predictor_loss * mask).sum() / torch.max(
-            mask.sum(), torch.Tensor([1]).to(self.device)
-        )
+        mask = (mask < self.predictor_update_proportion).type(torch.FloatTensor).to(self.device)
+        predictor_loss = (predictor_loss * mask).sum() / torch.max(mask.sum(), torch.Tensor([1]).to(self.device))
         new_policy, ext_new_values, int_new_values = self.new_model(observations_tensor)
         ext_value_loss = self.mse_loss(ext_new_values, ext_returns_tensor)
         int_value_loss = self.mse_loss(int_new_values, int_returns_tensor)
@@ -581,27 +523,17 @@ class Trainer:
 
         ratio = torch.exp(new_log_prob - old_log_prob)
 
-        clipped_policy_loss = (
-            torch.clamp(ratio, 1.0 - self.clip_range, 1 + self.clip_range)
-            * advantages_tensor
-        )
+        clipped_policy_loss = torch.clamp(ratio, 1.0 - self.clip_range, 1 + self.clip_range) * advantages_tensor
         policy_loss = ratio * advantages_tensor
 
         selected_policy_loss = -torch.min(clipped_policy_loss, policy_loss).mean()
         entropy = new_dist.entropy().mean()
         self.optimizer.zero_grad()
 
-        loss = (
-            selected_policy_loss
-            + (self.value_coef * value_loss)
-            - (self.entropy_coef * entropy)
-            + predictor_loss
-        )
+        loss = selected_policy_loss + (self.value_coef * value_loss) - (self.entropy_coef * entropy) + predictor_loss
         loss.backward()
 
-        global_grad_norm_(
-            list(self.new_model.parameters()) + list(self.predictor_model.parameters())
-        )
+        global_grad_norm_(list(self.new_model.parameters()) + list(self.predictor_model.parameters()))
 
         self.optimizer.step()
         return loss, selected_policy_loss, value_loss, predictor_loss, entropy

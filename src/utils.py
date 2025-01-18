@@ -14,15 +14,11 @@ class RunningStdMean:
         mean_b = np.mean(input_batch_b, axis=0)
         var_b = np.var(input_batch_b, axis=0)
         count_b = input_batch_b.shape[0]
-        self.var, self.mean = self.parallel_variance(
-            self.mean, self.count, self.var, mean_b, count_b, var_b
-        )
+        self.var, self.mean = self.parallel_variance(self.mean, self.count, self.var, mean_b, count_b, var_b)
         self.count = count_b + self.count
 
     def update_from_mean_std(self, mean_b, var_b, count_b):
-        self.var, self.mean = self.parallel_variance(
-            self.mean, self.count, self.var, mean_b, count_b, var_b
-        )
+        self.var, self.mean = self.parallel_variance(self.mean, self.count, self.var, mean_b, count_b, var_b)
         self.count = count_b + self.count
 
     def parallel_variance(self, avg_a, count_a, var_a, avg_b, count_b, var_b):
