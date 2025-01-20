@@ -99,6 +99,10 @@ if __name__ == "__main__":
         num_action = 6  # number of actions for freeway
         flag.ENV = "KK"
 
+    if args.env_type == "PM":
+        num_action = 5
+        flag.ENV = "PM"
+
     if flag.TRAIN:
         new_trainer = Trainer(
             num_training_steps=args.train_steps,

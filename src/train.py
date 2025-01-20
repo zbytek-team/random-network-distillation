@@ -13,6 +13,7 @@ import src.flag as flag
 import src.envs.montezuma as montezuma_revenge_env
 import src.envs.freeway as freeway_env
 import src.envs.king_kong as king_kong_env
+import src.envs.pacman as pacman_env
 from src.models.ppo import Model
 from src.models.rnd import TargetModel, PredictorModel
 from src.utils import RunningStdMean, RewardForwardFilter, global_grad_norm_
@@ -157,6 +158,8 @@ class Trainer:
                     new_env = freeway_env.Freeway(i, child, self.num_action_repeat, 0.25, 6000)
                 elif flag.ENV == "KK":
                     new_env = king_kong_env.KingKong(i, child, self.num_action_repeat, 0.25, 6000)
+                elif flag.ENV == "PM":
+                    new_env = pacman_env.Pacman(i, child, self.num_action_repeat, 0.25, 6000)
 
                 new_env.start()
                 envs.append(new_env)
