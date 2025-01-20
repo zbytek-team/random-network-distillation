@@ -3,6 +3,7 @@ from torch.multiprocessing import Pipe
 import src.envs.montezuma as montezuma_revenge_env
 import src.envs.freeway as freeway_env
 import src.envs.king_kong as king_kong_env
+import src.envs.pacman as pacman_env
 import torch
 import src.flag as flag
 import numpy as np
@@ -23,6 +24,8 @@ class Player:
             num_action = 3
         elif flag.ENV == "KK":
             num_action = 6
+        elif flag.ENV == "PM":
+            num_action = 5
 
         self.model = Model(num_action).to(self.device)
         self.model.load_state_dict(checkpoint["new_model_state_dict"])
@@ -37,6 +40,8 @@ class Player:
             env = freeway_env.Freeway(0, child, 1, 0, 18000)
         elif flag.ENV == "KK":
             env = king_kong_env.KingKong(0, child, 1, 0, 18000)
+        elif flag.ENV == "PM":
+            env = pacman_env.Pacman(0, child, 1, 0, 18000)
         env.start()
         self.current_observation = np.zeros((4, 84, 84))
 
