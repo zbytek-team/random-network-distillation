@@ -59,7 +59,6 @@ class Pacman(Process):
 
                 if flag.SHOW_GAME:
                     self.env.render()
-                    time.sleep(0.05)
                 self.steps += 1
                 self.child.send([obs, reward, done])
         except EOFError:

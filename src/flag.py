@@ -1,6 +1,6 @@
 # This file is used to store some global variables.
 DEBUG = False
-SHOW_GAME = False
+SHOW_GAME = True
 USE_GAE = True  # use generalized advantage estimation
 TENSORBOARD_AVALAIBLE = True
 TRAIN = False
