@@ -7,14 +7,13 @@ import src.flag as flag
 import time
 import ale_py
 import traceback
+from vizdoom import gymnasium_wrapper
 
 cv2.ocl.setUseOpenCL(False)
-gym.register_envs(ale_py)
 
-
-class Pacman(Process):
+class DOOM(Process):
     def __init__(self, env_id, child, action_re, p, max_steps):
-        super(Pacman, self).__init__()
+        super(DOOM, self).__init__()
         self.env = self.make_env()
         self.env.reset()
         self.child = child
@@ -27,7 +26,7 @@ class Pacman(Process):
         self.max_steps = max_steps
 
     def make_env(self):
-        env = gym.make("ALE/Pacman-v5", render_mode="human" if flag.SHOW_GAME else None)
+        env = gym.make("VizdoomCorridor-v0", render_mode="human" if flag.SHOW_GAME else None)
         env = PreprocessFrame(env)
         return env
 
@@ -59,6 +58,7 @@ class Pacman(Process):
 
                 if flag.SHOW_GAME:
                     self.env.render()
+                    time.sleep(0.05)
                 self.steps += 1
                 self.child.send([obs, reward, done])
         except EOFError:
@@ -72,27 +72,30 @@ class Pacman(Process):
 
 class PreprocessFrame(gym.ObservationWrapper):
     def __init__(self, env):
-        gym.ObservationWrapper.__init__(self, env)
+        super().__init__(env)
         self.width = 84
         self.height = 84
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(
+            low=0, high=255, shape=(self.height, self.width, 1), dtype=np.uint8
+        )
         self.frame_deque = deque(
-            [
-                np.zeros((self.height, self.width)),
-                np.zeros((self.height, self.width)),
-                np.zeros((self.height, self.width)),
-                np.zeros((self.height, self.width)),
-            ],
-            maxlen=4,
+            [np.zeros((self.height, self.width), dtype=np.uint8)] * 4, maxlen=4
         )
 
     def observation(self, frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        frame = frame[:, :, None]
+        if frame is None or not isinstance(frame, np.ndarray):
+            raise ValueError(f"Invalid frame received: {type(frame)}")
+
+        # Ensure frame has the correct shape for conversion
+        if len(frame.shape) == 3 and frame.shape[2] == 3:  # Expecting RGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        elif len(frame.shape) != 2:  # Unexpected format
+            raise ValueError(f"Unexpected frame shape: {frame.shape}")
 
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        frame = frame[:, :, None]  # Add channel dimension
         return self.stack_frames(frame)
 
     def stack_frames(self, new_frame):
         self.frame_deque.append(new_frame)
-        return np.stack(self.frame_deque)
+        return np.stack(self.frame_deque, axis=-1)

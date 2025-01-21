@@ -103,6 +103,10 @@ if __name__ == "__main__":
         num_action = 5
         flag.ENV = "PM"
 
+    if args.env_type == "DOOM":
+        num_action = 7
+        flag.ENV = "DOOM"
+
     if flag.TRAIN:
         new_trainer = Trainer(
             num_training_steps=args.train_steps,
